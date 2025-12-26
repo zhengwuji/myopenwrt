@@ -15,25 +15,44 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-        with:
-          path: src
 
-      - name: Build Package
-        uses: openwrt/gh-action-sdk@v1
-        env:
-          ARCH: x86_64
-          FEEDNAME: packages_ci
-          PACKAGES: luci-app-proxy-upgrade
-        with:
-          target: x86/64
-          package: luci-app-proxy-upgrade
-          build_dir: src
+      - name: Prepare OpenWrt SDK
+        run: |
+          # Download OpenWrt SDK (x86/64 23.05.5)
+          wget https://downloads.openwrt.org/releases/23.05.5/targets/x86/64/openwrt-sdk-23.05.5-x86-64_gcc-12.3.0_musl.Linux-x86_64.tar.xz
+          tar -xf openwrt-sdk-*.tar.xz
+          mv openwrt-sdk-* sdk
+          
+          # Install dependencies
+          sudo apt-get update
+          sudo apt-get install -y build-essential ccache ecj fastjar file g++ gawk \
+            gettext git java-propose-classpath libelf-dev libncurses5-dev \
+            libncursesw5-dev libssl-dev python3 python3-distutils python3-setuptools \
+            rsync subversion swig time xsltproc zlib1g-dev
+
+      - name: Prepare Package
+        run: |
+          # Copy our package to SDK
+          mkdir -p sdk/package/luci-app-proxy-upgrade
+          cp -r luci-app-proxy-upgrade/* sdk/package/luci-app-proxy-upgrade/
+          
+          # Update feeds
+          cd sdk
+          ./scripts/feeds update -a
+          ./scripts/feeds install -a
+
+      - name: Compile Package
+        working-directory: sdk
+        run: |
+          # Compile with verbose output for debugging
+          make defconfig
+          make package/luci-app-proxy-upgrade/compile V=s
 
       - name: Upload Artifacts
         uses: actions/upload-artifact@v4
         with:
           name: luci-app-proxy-upgrade
-          path: bin/packages/*/base/*.ipk
+          path: sdk/bin/packages/*/base/*.ipk
 
       - name: Upload Build Logs on Failure
         if: failure()
@@ -41,11 +60,9 @@ jobs:
         with:
           name: build-logs
           path: |
-            logs/
-            bin/
-            build_dir/
-            staging_dir/
-            tmp/
+            sdk/logs/
+            sdk/tmp/
+            sdk/.config
           retention-days: 5
 
       - name: Create Release
@@ -56,4 +73,4 @@ jobs:
           name: Release v1.0-${{ github.run_number }}
           draft: false
           prerelease: false
-          files: bin/packages/*/base/*.ipk
+          files: sdk/bin/packages/*/base/*.ipk
