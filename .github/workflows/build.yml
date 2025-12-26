@@ -14,7 +14,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Build Package
         uses: openwrt/gh-action-sdk@v1
@@ -25,14 +25,27 @@ jobs:
           package: luci-app-proxy-upgrade
 
       - name: Upload Artifacts
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: luci-app-proxy-upgrade
           path: bin/packages/*/base/*.ipk
 
+      - name: Upload Build Logs on Failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-logs
+          path: |
+            logs/
+            bin/
+            build_dir/
+            staging_dir/
+            tmp/
+          retention-days: 5
+
       - name: Create Release
         uses: softprops/action-gh-release@v1
-        if: github.ref == 'refs/heads/main'
+        if: github.ref == 'refs/heads/main' && success()
         with:
           tag_name: v1.0-${{ github.run_number }}
           name: Release v1.0-${{ github.run_number }}
