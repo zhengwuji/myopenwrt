@@ -15,14 +15,19 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          path: src
 
       - name: Build Package
         uses: openwrt/gh-action-sdk@v1
         env:
           ARCH: x86_64
+          FEEDNAME: packages_ci
+          PACKAGES: luci-app-proxy-upgrade
         with:
           target: x86/64
           package: luci-app-proxy-upgrade
+          build_dir: src
 
       - name: Upload Artifacts
         uses: actions/upload-artifact@v4
