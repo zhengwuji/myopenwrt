@@ -1,1 +1,1 @@
-# myopenwrt
+# openwrt-speed
