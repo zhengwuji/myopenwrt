@@ -1,147 +1,266 @@
-<div class="cbi-section">
-	<h3>操作</h3>
-	<div class="cbi-section-node">
-		<input type="button" class="cbi-button cbi-button-apply" value="测试连接" onclick="testProxy()" />
-		<span id="test-result" style="margin-left: 10px; font-weight: bold;"></span>
-		<br/><br/>
-		<input type="button" class="cbi-button cbi-button-save" value="开始升级" onclick="startUpgrade()" />
+<%+proxy-upgrade /device_info%>
+
+	<div class="cbi-value">
+		<label class="cbi-value-title">
+			<%:设备详情%>
+		</label>
+		<div class="cbi-value-field">
+			<input type="button" class="cbi-button cbi-button-apply" value="<%:查看选中设备详情%>"
+				onclick="viewSelectedDevice()" />
+			<div class="cbi-value-description">
+				<%:点击此按钮可以查看当前选中设备的详细信息（如MAC地址、连接时间、操作系统等），帮助确认是否选对了设备。%>
+			</div>
+		</div>
 	</div>
-	
-	<h3>升级日志</h3>
-	<textarea id="upgrade-log" style="width: 100%; height: 300px; font-family: monospace; margin-top: 10px;" readonly></textarea>
-</div>
 
-<div class="cbi-section">
-    <h3>插件说明与教程</h3>
-    <div class="cbi-section-node">
-        <div class="cbi-value">
-            <div class="cbi-value-field" style="width: 100%; color: #666; line-height: 1.8; font-size: 14px;">
-                
-                <div style="background-color: #e8f5e9; padding: 15px; border-left: 5px solid #4caf50; margin-bottom: 20px; border-radius: 4px;">
-                    <h4 style="margin-top: 0; color: #2e7d32;">💡 这个插件是做什么的？</h4>
-                    <p>简单来说，它能<strong>让 OpenWrt "借用" 您电脑的梯子来下载软件</strong>。</p>
-                    <p><strong>场景举例：</strong></p>
-                    <ul style="list-style-type: disc; margin-left: 20px;">
-                        <li><strong>情况 A</strong>：您想安装一个插件，但点击安装后，进度条卡在 0% 不动，或者提示下载失败。这是因为 OpenWrt 连不上国外的软件源。</li>
-                        <li><strong>情况 B</strong>：系统更新下载速度只有几 KB/s，升级一个软件要半小时。</li>
-                    </ul>
-                    <p><strong>使用本插件后</strong>：只要您的电脑能科学上网，OpenWrt 就能通过您的电脑高速下载，几秒钟搞定升级！</p>
-                </div>
+	<div class="cbi-value">
+		<label class="cbi-value-title">
+			<%:测试连接%>
+		</label>
+		<div class="cbi-value-field">
+			<input type="button" class="cbi-button cbi-button-apply" value="<%:测试%>" onclick="testConnection()" />
+			<span id="test-result" style="margin-left: 10px;"></span>
+			<div class="cbi-value-description">
+				<%:点击测试配置的代理是否能正常访问Google。如果显示绿色对勾，说明代理配置正确。%>
+			</div>
+		</div>
+	</div>
 
-                <h4 style="margin-bottom: 10px;">📖 使用教程</h4>
-                <p><strong>1. 电脑端准备：</strong><br/>
-                打开您的代理软件（如 V2RayN, Clash），找到 <strong>"允许局域网连接" (Allow LAN)</strong> 的开关并开启。</p>
-                
-                <p><strong>2. 插件配置：</strong><br/>
-                - <strong>启用代理</strong>：选择 "启用"。<br/>
-                - <strong>代理服务器IP</strong>：点开下拉框，选择您电脑的 IP（通常是 192.168.x.x 或 10.10.x.x）。<br/>
-                - <strong>代理端口</strong>：填写代理软件的局域网端口（V2RayN 默认 10808，Clash 默认 7890）。<br/>
-                - <strong>代理类型</strong>：推荐选择 SOCKS5。</p>
-                
-                <p><strong>3. 开始使用：</strong><br/>
-                点击 <strong>"测试连接"</strong>，看到绿色的 "成功" 后，点击 <strong>"保存并应用"</strong>，最后点击 <strong>"开始升级"</strong>。</p>
-                
-                <div style="margin-top: 15px; padding: 10px; background-color: #fff3cd; border-left: 4px solid #ffc107; color: #856404;">
-                <strong>⚠️ 常见问题：</strong><br/>
-                如果测试失败，通常是因为电脑防火墙拦截了，或者代理软件没开启"允许局域网"。请尝试暂时关闭电脑防火墙。
-                </div>
-            </div>
-        </div>
-    </div>
-</div>
+	<div class="cbi-value">
+		<label class="cbi-value-title">
+			<%:开始升级%>
+		</label>
+		<div class="cbi-value-field">
+			<input type="button" class="cbi-button cbi-button-save" value="<%:升级%>" onclick="startUpgrade()" />
+			<div class="cbi-value-description">
+				<%:确认代理连接正常后，点击此按钮开始执行OpenWrt系统升级脚本。%>
+			</div>
+		</div>
+	</div>
 
-<script type="text/javascript">
-	function getValueBySuffix(suffix) {
-		var elements = document.querySelectorAll('[id$="' + suffix + '"]');
-		for (var i = 0; i < elements.length; i++) {
-			var el = elements[i];
-			if (el.value && el.value.trim() !== "") {
-				return el.value;
+	<script>
+		// Helper to extract IP
+		function extractIP(val) {
+			if (val && typeof val === 'string') {
+				var match = val.match(/(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})/);
+				if (match) return match[1];
 			}
+			return null;
 		}
-		elements = document.querySelectorAll('[name$="' + suffix + '"]');
-		for (var i = 0; i < elements.length; i++) {
-			var el = elements[i];
-			if (el.value && el.value.trim() !== "") {
-				return el.value;
-			}
-		}
-		return "";
-	}
 
-	function testProxy() {
-		var resultSpan = document.getElementById('test-result');
-		if (!resultSpan) return;
-		
-		try {
-			resultSpan.innerHTML = "准备测试...";
-			resultSpan.style.color = "black";
-			
-			var ip = getValueBySuffix("proxy_ip");
-			var port = getValueBySuffix("proxy_port");
-			var type = getValueBySuffix("proxy_type") || "http";
-			var timeout = getValueBySuffix("timeout") || "5";
-			
-			console.log("Found: IP=" + ip + ", Port=" + port + ", Type=" + type + ", Timeout=" + timeout);
-			
-			if(!ip || !port) {
-				resultSpan.innerHTML = "错误: 无法获取IP或端口 (IP='" + ip + "', Port='" + port + "')";
-				resultSpan.style.color = "red";
-				return;
+		function viewSelectedDevice() {
+			var ip = null;
+			var debugMsg = "Debug Log:\n";
+
+			// 1. Try standard LuCI ID pattern
+			var el = document.getElementById('cbid.proxy-upgrade.proxy.proxy_ip');
+			if (el) {
+				debugMsg += "Found standard ID: " + el.value + "\n";
+				ip = extractIP(el.value);
 			}
-			
-			var btn = document.querySelector('input[value="测试连接"]');
-			var originalVal = btn.value;
-			btn.value = "测试中...";
-			btn.disabled = true;
-			resultSpan.innerHTML = "正在连接 " + ip + ":" + port + " (" + type + ")...";
-			
-			var ts = new Date().getTime();
-			
-			XHR.get('<%=luci.dispatcher.build_url("admin", "system", "proxy-upgrade", "test")%>', 
-				{ip: ip, port: port, type: type, timeout: timeout, _: ts}, 
-				function(x, data) {
-					btn.value = originalVal;
-					btn.disabled = false;
-					
-					if (x.status == 200) {
-						resultSpan.innerHTML = x.responseText;
-						if (x.responseText && x.responseText.indexOf("成功") !== -1) {
-							resultSpan.style.color = "green";
-						} else {
-							resultSpan.style.color = "red";
+
+			// 2. Try searching by name attribute
+			if (!ip) {
+				var els = document.getElementsByName('cbid.proxy-upgrade.proxy.proxy_ip');
+				if (els.length > 0) {
+					debugMsg += "Found by name: " + els[0].value + "\n";
+					ip = extractIP(els[0].value);
+				}
+			}
+
+			// 3. Try searching for any input containing the IP format
+			if (!ip) {
+				var inputs = document.getElementsByTagName('input');
+				for (var i = 0; i < inputs.length; i++) {
+					if (inputs[i].type === 'text' || inputs[i].type === 'hidden') {
+						var val = inputs[i].value;
+						if (val && val.indexOf('.') !== -1 && extractIP(val)) {
+							if (inputs[i].id.indexOf('proxy_ip') !== -1 || inputs[i].name.indexOf('proxy_ip') !== -1) {
+								debugMsg += "Found heuristic input: " + inputs[i].id + " = " + val + "\n";
+								ip = extractIP(val);
+								if (ip) break;
+							}
 						}
-					} else {
-						resultSpan.innerHTML = "请求错误: " + x.status;
-						resultSpan.style.color = "red";
 					}
 				}
-			);
-		} catch (e) {
-			resultSpan.innerHTML = "JS错误: " + e.message;
-			resultSpan.style.color = "red";
-		}
-	}
-	
-	function startUpgrade() {
-		if(!confirm("确定要开始升级吗？这可能需要几分钟。")) return;
-		
-		document.getElementById('upgrade-log').value = "正在启动升级...\n";
-		var btn = document.querySelector('input[value="开始升级"]');
-		btn.disabled = true;
-		
-		XHR.get('<%=luci.dispatcher.build_url("admin", "system", "proxy-upgrade", "run")%>', null, function(x, data) {
-			pollLog();
-		});
-	}
-	
-	function pollLog() {
-		XHR.poll(2, '<%=luci.dispatcher.build_url("admin", "system", "proxy-upgrade", "log")%>', null, function(x, data) {
-			var log = document.getElementById('upgrade-log');
-			if(log) {
-				log.value = x.responseText;
-				log.scrollTop = log.scrollHeight;
 			}
-		});
-	}
-</script>
+
+			// 4. Try searching for the visible text in Argon's custom dropdown
+			if (!ip) {
+				var selects = document.querySelectorAll('.cbi-input-select');
+				for (var i = 0; i < selects.length; i++) {
+					debugMsg += "Found select class: " + selects[i].value + "\n";
+					ip = extractIP(selects[i].value);
+					if (ip) break;
+				}
+			}
+
+			if (ip) {
+				showDeviceInfo(ip);
+			} else {
+				var userIp = prompt("自动检测失败。\n\n" + debugMsg + "\n请手动输入IP地址:", "");
+				if (userIp) {
+					var manualIp = extractIP(userIp);
+					if (manualIp) {
+						showDeviceInfo(manualIp);
+					} else {
+						alert("无效的IP地址");
+					}
+				}
+			}
+		}
+
+		function showDeviceInfo(ip) {
+			var modal = document.getElementById('deviceInfoModal');
+			modal.style.display = 'block';
+
+			// Reset fields
+			document.getElementById('info-ip').textContent = ip;
+			var fields = ['info-mac', 'info-hostname', 'info-connect-time', 'info-connected-duration', 'info-os', 'info-ttl', 'info-connections'];
+			for (var i = 0; i < fields.length; i++) {
+				document.getElementById(fields[i]).textContent = '加载中...';
+			}
+
+			// Fetch device info
+			var xhr = new XMLHttpRequest();
+			var url = '<%=url("admin/system/proxy-upgrade/device_info")%>?ip=' + encodeURIComponent(ip) + '&t=' + new Date().getTime();
+
+			xhr.open('GET', url, true);
+			xhr.timeout = 10000; // 10s timeout
+
+			xhr.onload = function () {
+				if (xhr.status === 200) {
+					try {
+						var data = JSON.parse(xhr.responseText);
+						if (data.error) {
+							alert("服务器返回错误: " + data.error);
+							return;
+						}
+						document.getElementById('info-mac').textContent = data.mac || '未知';
+						document.getElementById('info-hostname').textContent = data.hostname || '未知';
+						document.getElementById('info-connect-time').textContent = data.connect_timestamp || '未知';
+						document.getElementById('info-connected-duration').textContent = data.connected_time || '未知';
+						document.getElementById('info-os').textContent = data.os_type || '未知';
+						document.getElementById('info-ttl').textContent = data.ttl || '未知';
+						document.getElementById('info-connections').textContent = data.connections || '0';
+					} catch (e) {
+						console.error("JSON Parse Error:", e);
+						console.log("Raw Response:", xhr.responseText);
+						document.getElementById('info-mac').textContent = '数据解析失败';
+						alert("解析数据失败:\n" + e.message + "\n\n原始数据:\n" + xhr.responseText.substring(0, 100));
+					}
+				} else {
+					document.getElementById('info-mac').textContent = '请求失败 (' + xhr.status + ')';
+					alert("请求失败: HTTP " + xhr.status + "\nURL: " + url);
+				}
+			};
+
+			xhr.onerror = function () {
+				document.getElementById('info-mac').textContent = '网络错误';
+				alert("网络请求错误 (Network Error)\n请检查网络连接或查看控制台日志。");
+			};
+
+			xhr.ontimeout = function () {
+				document.getElementById('info-mac').textContent = '请求超时';
+				alert("请求超时 (Timeout)");
+			};
+
+			xhr.send();
+		}
+
+		function closeDeviceInfo() {
+			document.getElementById('deviceInfoModal').style.display = 'none';
+		}
+
+		// Close modal when clicking outside
+		window.onclick = function (event) {
+			var modal = document.getElementById('deviceInfoModal');
+			if (event.target == modal) {
+				modal.style.display = 'none';
+			}
+		}
+
+		function testConnection() {
+			var result = document.getElementById('test-result');
+			result.innerHTML = '<span style="color: #0088cc;">测试中...</span>';
+
+			// Helper to get value from input by ID or Name
+			function getValue(field) {
+				var id = 'cbid.proxy-upgrade.proxy.proxy_' + field;
+				var el = document.getElementById(id);
+				if (el) return el.value;
+
+				var els = document.getElementsByName(id);
+				if (els.length > 0) return els[0].value;
+
+				// Fallback for Argon or other themes that might wrap inputs
+				// Try to find input that ends with the field name
+				var inputs = document.getElementsByTagName('input');
+				for (var i = 0; i < inputs.length; i++) {
+					if (inputs[i].name && inputs[i].name.indexOf(field) !== -1) {
+						return inputs[i].value;
+					}
+				}
+				// Try select for type
+				if (field === 'type') {
+					var selects = document.getElementsByTagName('select');
+					for (var i = 0; i < selects.length; i++) {
+						if (selects[i].name && selects[i].name.indexOf(field) !== -1) {
+							return selects[i].value;
+						}
+					}
+				}
+
+				return null;
+			}
+
+			var ip = getValue('ip');
+			// Extract IP if it contains extra text
+			ip = extractIP(ip);
+
+			var port = getValue('port');
+			var type = getValue('type');
+
+			// Debug log to console
+			console.log("Test Connection Params:", { ip: ip, port: port, type: type });
+
+			var xhr = new XMLHttpRequest();
+			xhr.open('POST', '<%=url("admin/system/proxy-upgrade/test")%>', true);
+			xhr.setRequestHeader("Content-Type", "application/x-www-form-urlencoded");
+
+			xhr.onload = function () {
+				if (xhr.status === 200) {
+					try {
+						var data = JSON.parse(xhr.responseText);
+						if (data.success) {
+							result.innerHTML = '<span style="color: green;">✓ ' + data.message + '</span>';
+						} else {
+							result.innerHTML = '<span style="color: red;">✗ ' + data.message + '</span>';
+						}
+					} catch (e) {
+						result.innerHTML = '<span style="color: red;">✗ 数据解析错误</span>';
+					}
+				} else {
+					result.innerHTML = '<span style="color: red;">✗ 请求失败</span>';
+				}
+			};
+			xhr.onerror = function () {
+				result.innerHTML = '<span style="color: red;">✗ 网络错误</span>';
+			};
+
+			var params = "ip=" + encodeURIComponent(ip || '') +
+				"&port=" + encodeURIComponent(port || '') +
+				"&type=" + encodeURIComponent(type || 'http');
+			xhr.send(params);
+		}
+
+		function startUpgrade() {
+			if (!confirm('确定要开始升级吗?')) return;
+
+			window.open('<%=url("admin/system/proxy-upgrade/log")%>', '_blank');
+
+			var xhr = new XMLHttpRequest();
+			xhr.open('POST', '<%=url("admin/system/proxy-upgrade/upgrade")%>', true);
+			xhr.send();
+		}
+	</script>

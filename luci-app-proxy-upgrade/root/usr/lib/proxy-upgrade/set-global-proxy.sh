@@ -1,50 +1,62 @@
 #!/bin/sh
 
-. /lib/functions.sh
+# Load UCI config
+enabled=$(uci -q get proxy-upgrade.@proxy[0].enabled)
+proxy_ip=$(uci -q get proxy-upgrade.@proxy[0].proxy_ip)
+proxy_port=$(uci -q get proxy-upgrade.@proxy[0].proxy_port)
+proxy_type=$(uci -q get proxy-upgrade.@proxy[0].proxy_type)
+global_proxy=$(uci -q get proxy-upgrade.@proxy[0].global_proxy)
 
-config_load proxy-upgrade
+OPKG_CONF="/etc/opkg.conf"
+PROFILE_SCRIPT="/etc/profile.d/proxy_upgrade.sh"
 
-clear_rules() {
-    while ip rule show | grep -q "lookup 100"; do
-        ip rule del lookup 100
-    done
-    ip route flush table 100
-}
-
-handle_proxy() {
-    local config="$1"
-    local enabled
-    local global_proxy
-    local proxy_ip
+# Function to clear proxy settings
+clear_proxy() {
+    # Remove from opkg.conf
+    sed -i '/option http_proxy/d' "$OPKG_CONF"
+    sed -i '/option https_proxy/d' "$OPKG_CONF"
+    sed -i '/option ftp_proxy/d' "$OPKG_CONF"
     
-    config_get_bool enabled "$config" enabled 0
-    config_get_bool global_proxy "$config" global_proxy 0
-    config_get proxy_ip "$config" proxy_ip
-
-    clear_rules
-
-    if [ "$enabled" = "1" ] && [ "$global_proxy" = "1" ] && [ -n "$proxy_ip" ]; then
-        # Get LAN subnet
-        local LAN_NET=$(ip addr show br-lan | awk '/inet / {print $2}')
-        
-        # Avoid loop for proxy IP
-        ip rule add to "$proxy_ip" lookup main pref 8999
-        
-        # Avoid local traffic going to proxy
-        if [ -n "$LAN_NET" ]; then
-            ip rule add to "$LAN_NET" lookup main pref 8998
-        fi
-        
-        # Add route to table 100
-        ip route add default via "$proxy_ip" dev br-lan table 100
-        
-        # Route all traffic to table 100
-        ip rule add from all lookup 100 pref 9000
-        
-        echo "Global Proxy Enabled: via $proxy_ip"
-    else
-        echo "Global Proxy Disabled"
-    fi
+    # Remove profile script
+    rm -f "$PROFILE_SCRIPT"
+    
+    # Unset vars in current environment (though this script runs in subshell usually)
+    unset http_proxy https_proxy ftp_proxy all_proxy
+    
+    echo "Global Proxy Disabled"
 }
 
-config_foreach handle_proxy proxy
+if [ "$enabled" = "1" ] && [ "$global_proxy" = "1" ] && [ -n "$proxy_ip" ] && [ -n "$proxy_port" ]; then
+    # Construct Proxy URL
+    if [ "$proxy_type" = "socks5" ]; then
+        # Use socks5h for remote DNS
+        PROXY_URL="socks5h://$proxy_ip:$proxy_port"
+    else
+        PROXY_URL="$proxy_type://$proxy_ip:$proxy_port"
+    fi
+    
+    echo "Setting Global Proxy to $PROXY_URL"
+    
+    # 1. Configure opkg
+    # Clean old entries first
+    sed -i '/option http_proxy/d' "$OPKG_CONF"
+    sed -i '/option https_proxy/d' "$OPKG_CONF"
+    sed -i '/option ftp_proxy/d' "$OPKG_CONF"
+    
+    echo "option http_proxy $PROXY_URL" >> "$OPKG_CONF"
+    echo "option https_proxy $PROXY_URL" >> "$OPKG_CONF"
+    echo "option ftp_proxy $PROXY_URL" >> "$OPKG_CONF"
+    
+    # 2. Configure shell environment via profile.d
+    mkdir -p /etc/profile.d
+    cat > "$PROFILE_SCRIPT" <<EOT
+export http_proxy="$PROXY_URL"
+export https_proxy="$PROXY_URL"
+export ftp_proxy="$PROXY_URL"
+export all_proxy="$PROXY_URL"
+EOT
+    chmod +x "$PROFILE_SCRIPT"
+    
+else
+    clear_proxy
+fi
